@@ -1,0 +1,14 @@
+<root>
+	<level id="test1" extra="waa">
+		<item id="item1"></item>
+	</level>
+	<level id="test2" extra="wee">
+		<item id="item1"></item>
+	</level>
+	<level id="test3" extra="wee">
+		<item id="item1"></item>
+	</level>
+	<level id="test4" extra="waa">
+		<item id="item1"></item>
+	</level>
+</root>
