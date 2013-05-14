@@ -1,5 +1,5 @@
 Import mojo
-Import skn3.xml
+Import xml
 
 '--- test program---
 Class TestApp Extends App
