@@ -1,0 +1,16 @@
+ <thelist>
+	<Session>
+		<Title>Antrenament 1</Title>
+		<Picture>0</Picture>
+		<Description>Acesta este cel mai utli antrenament ever.</Description>
+		<Duration>70</Duration>
+		<NumberOfPictures>67</NumberOfPictures>		
+	</Session>
+	<Session>
+		<Title>Antrenament 2</Title>
+		<Picture>1</Picture>
+		<Description>Acesta este un antrenament care trebuie cumparat.</Description>
+		<Duration>90</Duration>
+		<NumberOfPictures>67</NumberOfPictures>
+	</Session>
+ </thelist>
