@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 18
+' - added GetAttributeOrAttribute() to XMLNode. This allows you to get attribute by id. If that attribute doesnt exist it looks for second id. If neither exist, default value is returned.
 'version 17
 ' - added simple test for no xml data passed in
 'version 16
@@ -1356,6 +1358,111 @@ Class XMLNode
 		Local attribute:= attributes.Get(id)
 		
 		'use default value as doesn't exist
+		If attribute = Null Return defaultValue
+		
+		'return real value
+		Return attribute.value
+	End
+	
+	Method GetAttributeOrAttribute:String(id1:String, id2:String)
+		' --- get attribute value or another attribute if other doesn't exist ---
+		'fix id casing
+		id1 = id1.ToLower()
+		
+		'check if it exists
+		Local attribute:= attributes.Get(id1)
+		
+		'lookup other attribute?
+		If attribute = Null
+			id2 = id2.ToLower()
+			attribute = attributes.Get(id2)
+		EndIf
+		
+		'default value?
+		If attribute = Null Return ""
+		
+		'return real value
+		Return attribute.value
+	End
+	
+	Method GetAttributeOrAttribute:Bool(id1:String, id2:String, defaultValue:Bool)
+		' --- get attribute value or another attribute if other doesn't exist ---
+		'fix id casing
+		id1 = id1.ToLower()
+		
+		'check if it exists
+		Local attribute:= attributes.Get(id1)
+		
+		'lookup other attribute?
+		If attribute = Null
+			id2 = id2.ToLower()
+			attribute = attributes.Get(id2)
+		EndIf
+		
+		'default value?
+		If attribute = Null Return defaultValue
+		
+		'return real value
+		Return attribute.value = "true" or Int(attribute.value) = True
+	End
+	
+	Method GetAttributeOrAttribute:Int(id1:String, id2:String, defaultValue:Int)
+		' --- get attribute value or another attribute if other doesn't exist ---
+		'fix id casing
+		id1 = id1.ToLower()
+		
+		'check if it exists
+		Local attribute:= attributes.Get(id1)
+		
+		'lookup other attribute?
+		If attribute = Null
+			id2 = id2.ToLower()
+			attribute = attributes.Get(id2)
+		EndIf
+		
+		'default value?
+		If attribute = Null Return defaultValue
+		
+		'return real value
+		Return Int(attribute.value)
+	End
+	
+	Method GetAttributeOrAttribute:Float(id1:String, id2:String, defaultValue:Float)
+		' --- get attribute value or another attribute if other doesn't exist ---
+		'fix id casing
+		id1 = id1.ToLower()
+		
+		'check if it exists
+		Local attribute:= attributes.Get(id1)
+		
+		'lookup other attribute?
+		If attribute = Null
+			id2 = id2.ToLower()
+			attribute = attributes.Get(id2)
+		EndIf
+		
+		'default value?
+		If attribute = Null Return defaultValue
+		
+		'return real value
+		Return Float(attribute.value)
+	End
+	
+	Method GetAttributeOrAttribute:String(id1:String, id2:String, defaultValue:String)
+		' --- get attribute value or another attribute if other doesn't exist ---
+		'fix id casing
+		id1 = id1.ToLower()
+		
+		'check if it exists
+		Local attribute:= attributes.Get(id1)
+		
+		'lookup other attribute?
+		If attribute = Null
+			id2 = id2.ToLower()
+			attribute = attributes.Get(id2)
+		EndIf
+		
+		'default value?
 		If attribute = Null Return defaultValue
 		
 		'return real value
