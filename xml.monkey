@@ -29,6 +29,7 @@
 
 'version 18
 ' - added GetAttributeOrAttribute() to XMLNode. This allows you to get attribute by id. If that attribute doesnt exist it looks for second id. If neither exist, default value is returned.
+' - fixed null node returns in Get Previous/Next sibling methods
 'version 17
 ' - added simple test for no xml data passed in
 'version 16
@@ -809,7 +810,7 @@ Class XMLNode
 		Wend
 		
 		'not found
-		Return Null
+		Return doc.nullNode
 	End
 	
 	Method GetNextSibling:XMLNode(name:String, attributes:String)
@@ -834,7 +835,7 @@ Class XMLNode
 		Wend
 		
 		'not found
-		Return Null
+		Return doc.nullNode
 	End
 	
 	Method GetPreviousSibling:XMLNode(name:String = "")
@@ -856,7 +857,7 @@ Class XMLNode
 		Wend
 		
 		'not found
-		Return Null
+		Return doc.nullNode
 	End
 	
 	Method GetPreviousSibling:XMLNode(name:String, attributes:String)
@@ -881,7 +882,7 @@ Class XMLNode
 		Wend
 		
 		'not found
-		Return Null
+		Return doc.nullNode
 	End
 	
 	Method GetChild:XMLNode()
