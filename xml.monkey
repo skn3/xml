@@ -27,6 +27,11 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 19
+' - added GetChildren() override to get ALL children (thanks computercoder)
+' - added fixes to Export method, thanks computercoder
+' - added GetDescendants) override to get all
+' - added result param to all GetChildren/GetDescendants methods. This lets you pass in the list that results will be populated in
 'version 18
 ' - added GetAttributeOrAttribute() to XMLNode. This allows you to get attribute by id. If that attribute doesnt exist it looks for second id. If neither exist, default value is returned.
 ' - fixed null node returns in Get Previous/Next sibling methods
@@ -566,6 +571,10 @@ Class XMLNode
 	
 	'internal
 	Private
+	
+	
+	'internal
+	Private
 	Method Export:Void(options:Int, buffer:XMLStringBuffer, depth:Int)
 		' --- convert the node to a string ---
 		'make sure there is a buffer to work with
@@ -595,7 +604,7 @@ Class XMLNode
 		Next
 		
 		'check for short tag
-		If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS
+		If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS And Not value.Length
 			'no children so short tag
 			'finish opening tag
 			buffer.Add(32)
@@ -604,6 +613,7 @@ Class XMLNode
 			
 			'add new line
 			If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+
 		Else
 			'has children need to do opening tag only
 			'finish opening tag
@@ -614,13 +624,16 @@ Class XMLNode
 			
 			'add children
 			If children.IsEmpty() = False
-				For Local child:= EachIn children
+				For Local child:= Eachin children
 					child.Export(options, buffer, depth + 1)
 				Next
-			EndIf
+			Endif
 			
 			'add value
-			If value.Length buffer.Add(value)
+			If value.Length 
+				buffer.Add(value)
+				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+			Endif
 			
 			'add closing tag
 			'ident
@@ -628,7 +641,7 @@ Class XMLNode
 				For index = 0 Until depth
 					buffer.Add(9)
 				Next
-			EndIf
+			Endif
 			
 			'tag
 			buffer.Add(60)
@@ -638,7 +651,7 @@ Class XMLNode
 			
 			'add new line
 			If options & XML_STRIP_NEWLINE = False buffer.Add(10)
-		EndIf
+		Endif
 	End
 	
 	Method GetXMLAttribute:XMLAttribute(id:String)
@@ -941,9 +954,32 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetChildren:List<XMLNode>(name:String)
+	Method GetChildren:List<XMLNode>(result:List<XMLNode> = Null)
+		' --- get all children ---
+		If result = Null result = New List<XMLNode>
+		
+		'skip
+		If firstChild = Null Return result
+		
+		'scan children
+		If firstChild <> Null
+			Local child:= firstChild
+			While child
+				'Add child
+				result.AddLast(child)
+				
+				'next child
+				child = child.nextSibling
+			Wend
+		Endif
+		
+		'return the result
+		Return result
+	End
+	
+	Method GetChildren:List<XMLNode>(name:String, result:List<XMLNode> = Null)
 		' --- get children with name ---
-		Local result:= New List<XMLNode>
+		If result = Null result = New List<XMLNode>
 		
 		'skip
 		If firstChild = Null or name.Length = 0 Return result
@@ -967,9 +1003,9 @@ Class XMLNode
 		Return result
 	End
 		
-	Method GetChildren:List<XMLNode>(name:String, attributes:String)
+	Method GetChildren:List<XMLNode>(name:String, attributes:String, result:List<XMLNode> = Null)
 		' --- get children with name ---
-		Local result:= New List<XMLNode>
+		If result = Null result = New List<XMLNode>
 		
 		'skip
 		If firstChild = Null or (name.Length = 0 And attributes.Length = 0) Return result
@@ -995,10 +1031,27 @@ Class XMLNode
 		'return the result
 		Return result
 	End
-	
-	Method GetDescendants:List<XMLNode>(name:String)
+
+	Method GetDescendants:List<XMLNode>(result:List<XMLNode> = Null)
+		' --- get all descendants ---		
+		If result = Null result = New List<XMLNode>
+		
+		'skip
+		If firstChild = Null Return result
+		
+		'fix casing
+		name = name.ToLower()
+		
+		'call internal recursive method
+		GetDescendants(result)
+		
+		'return result
+		Return result
+	End
+			
+	Method GetDescendants:List<XMLNode>(name:String,result:List<XMLNode> = Null)
 		' --- get all descendants that match name ---		
-		Local result:= New List<XMLNode>
+		If result = Null result = New List<XMLNode>
 		
 		'skip
 		If firstChild = Null or name.Length = 0 Return result
@@ -1013,9 +1066,9 @@ Class XMLNode
 		Return result
 	End
 	
-	Method GetDescendants:List<XMLNode>(name:String, attributes:String)
+	Method GetDescendants:List<XMLNode>(name:String, attributes:String, result:List<XMLNode> = Null)
 		' --- get all descendants that match name ---		
-		Local result:= New List<XMLNode>
+		If result = Null result = New List<XMLNode>
 		
 		'skip
 		If firstChild = Null or name.Length = 0 Return result
