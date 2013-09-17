@@ -571,10 +571,6 @@ Class XMLNode
 	
 	'internal
 	Private
-	
-	
-	'internal
-	Private
 	Method Export:Void(options:Int, buffer:XMLStringBuffer, depth:Int)
 		' --- convert the node to a string ---
 		'make sure there is a buffer to work with
