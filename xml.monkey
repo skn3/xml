@@ -27,6 +27,9 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 20
+' - renamed internal function HasStringAtOffset to XMLHasStringAtOffset (monkey was showing conflict when same function name used elsewhere even though its private in xml?)
+' - fixed typo (thanks computercoder)
 'version 19
 ' - added GetChildren() override to get ALL children (thanks computercoder)
 ' - added fixes to Export method, thanks computercoder
@@ -69,7 +72,7 @@
 'version 4
 ' - changed readonly to valid to make more sense. Can now check for valid nodes like so If doc.GetChild("").valid
 'version 3
-' - speed improvement repalced string.Find with HasStringAtOffset() for searching for tag starts
+' - speed improvement repalced string.Find with XMLHasStringAtOffset() for searching for tag starts
 'version 2
 ' - changed Find___ functions to Get___
 ' - added GetDescendants() for getting all descendants of node
@@ -439,7 +442,7 @@ Class XMLAttributeQueryItem
 	End
 End
 
-Function HasStringAtOffset:Bool(needle:String, haystack:String, offset:Int)
+Function XMLHasStringAtOffset:Bool(needle:String, haystack:String, offset:Int)
 	' --- quick function for testing a string at given offset ---
 	'skip
 	If offset + needle.Length > haystack.Length Return False
@@ -1728,7 +1731,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 				Case 60'<
 					'tag start
 					'check for special tags
-					If HasStringAtOffset(XML_FORMAT_OPEN, raw, rawIndex)
+					If XMLHasStringAtOffset(XML_FORMAT_OPEN, raw, rawIndex)
 						'start of a xml tag
 						'check for format already existing
 						If hasFormat
@@ -1747,7 +1750,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						'move the raw index on
 						rawIndex = rawPos + XML_FORMAT_OPEN.Length - 1
 						
-					ElseIf HasStringAtOffset(COMMENT_OPEN, raw, rawIndex)
+					ElseIf XMLHasStringAtOffset(COMMENT_OPEN, raw, rawIndex)
 						'start of a comment
 						'look for end of comment so we can skip ahead
 						rawPos = raw.Find(COMMENT_CLOSE, rawIndex + COMMENT_OPEN.Length)
@@ -1776,7 +1779,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						'move the raw index on
 						rawIndex = rawPos + COMMENT_CLOSE.Length - 1
 						
-					ElseIf HasStringAtOffset(CDATA_OPEN, raw, rawIndex)
+					ElseIf XMLHasStringAtOffset(CDATA_OPEN, raw, rawIndex)
 						'start of cdata
 						'look for end of cdata so we can skip ahead
 						rawPos = raw.Find(CDATA_CLOSE, rawIndex + CDATA_OPEN.Length)
