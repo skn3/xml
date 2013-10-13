@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 21
+' - added value param to AddChild() method to quicker to create children
 'version 20
 ' - renamed internal function HasStringAtOffset to XMLHasStringAtOffset (monkey was showing conflict when same function name used elsewhere even though its private in xml?)
 ' - fixed typo (thanks computercoder)
@@ -697,7 +699,7 @@ Class XMLNode
 		Return firstChild <> Null
 	End
 	
-	Method AddChild:XMLNode(name:String, attributes:String = "")
+	Method AddChild:XMLNode(name:String, attributes:String = "", value:String = "")
 		' --- add a child node ---
 		'skip
 		If valid = False Return Null
@@ -706,6 +708,7 @@ Class XMLNode
 		Local child:= New XMLNode(name)
 		child.doc = doc
 		child.parent = Self
+		child.value = value
 		
 		'setup path
 		child.path = path + "/" + child.name
