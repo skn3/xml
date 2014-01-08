@@ -27,6 +27,10 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 22
+' - fixed self closing tags where no space is provided e.g. <tag/> - thanks AdamRedwoods and ComputerCoder
+' - moved into jungle solution
+' - added test example 5 for testing self closing tags without space
 'version 21
 ' - added value param to AddChild() method to quicker to create children
 'version 20
@@ -1951,17 +1955,26 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 								Return Null
 							EndIf
 							
-							'check for tag closing self
-							If hasTagName
-								waitTagClose = True
-								isCloseSelf = True
-							EndIf
-							
 							'flag processing of attribute if there is one
 							If attributeBuffer.Length processAttributeBuffer = True
 							
-							'setup that has tag end
-							hasTagClose = True
+							'check if the tag has actually been opened yet?
+							If hasTagName = False
+								'check for tag closing self
+								If processAttributeBuffer
+									'closing self but tag hasnt been opened yet
+									isCloseSelf = True
+									waitTagClose = True
+								Else
+									'close tag
+									hasTagClose = True
+								EndIf
+							Else
+								'tag is open, so now close self
+								hasTagClose = True
+								isCloseSelf = True
+								waitTagClose = True
+							EndIf
 							
 							'update line and column
 							rawColumn += 1
@@ -2156,7 +2169,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 					attributeBuffer.Add(rawAsc)
 				EndIf
 			EndIf
-				
+							
 			'look at processing a tag, this is delayed until the end so that possible processattributebuffer has a chance to run
 			If processTag
 				processTag = False
@@ -2164,7 +2177,8 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 				'check for tag operation
 				If inFormat = False
 					'normal tags
-					If hasTagClose = False
+					'check for open
+					If hasTagClose = False And isCloseSelf = False
 						'open tag has finished
 						'setup node pointers
 						parent = current
@@ -2172,7 +2186,13 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 					
 						'add parent to stack
 						stack.AddLast(parent)
-					Else
+					EndIf
+					
+					'instant close
+					If isCloseSelf hasTagClose = True
+					
+					'check for closed
+					If hasTagClose = True
 						'close tag has finished
 						If isCloseSelf = False
 							'the tag does not close itself
