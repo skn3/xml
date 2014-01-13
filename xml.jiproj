@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<JiProj xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" EntryPoint=".\example5.monkey" Name="xml">
+<JiProj xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" EntryPoint=".\example6.monkey" Name="xml">
   <Files>
     <Document Filename=".\example1.data\test1.xml" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
@@ -43,6 +43,13 @@
         <Y>0</Y>
       </CursorPos>
     </Document>
+    <Document Filename=".\example6.data\data.xml" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
+      <DocGUID />
+      <CursorPos>
+        <X>0</X>
+        <Y>0</Y>
+      </CursorPos>
+    </Document>
     <Document Filename=".\example1.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
       <CursorPos>
@@ -72,6 +79,13 @@
       </CursorPos>
     </Document>
     <Document Filename=".\example5.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
+      <DocGUID />
+      <CursorPos>
+        <X>0</X>
+        <Y>0</Y>
+      </CursorPos>
+    </Document>
+    <Document Filename=".\example6.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
       <CursorPos>
         <X>0</X>

@@ -27,6 +27,9 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 23
+' - added tweak/fix to parser to ignore doctype tag (later on can add support) (cheers copper circle)
+' - added tweak/fix to parser to allow : in tag/attribute names (later can add support for contexts) (cheers copper circle)
 'version 22
 ' - fixed self closing tags where no space is provided e.g. <tag/> - thanks AdamRedwoods and ComputerCoder
 ' - moved into jungle solution
@@ -105,6 +108,8 @@ Const COMMENT_OPEN:= "<!--"
 Const COMMENT_CLOSE:= "-->"
 Const CDATA_OPEN:= "<![CDATA["
 Const CDATA_CLOSE:= "]]>"
+Const DOCTYPE_OPEN:= "<!DOCTYPE"
+Const DOCTYPE_CLOSE:= ">"
 
 Class XMLStringBuffer
 	Field data:int[]
@@ -460,6 +465,50 @@ Function XMLHasStringAtOffset:Bool(needle:String, haystack:String, offset:Int)
 	
 	'return success
 	Return True
+End
+
+Function XMLFindNextAsc:Int(data:String, asc:Int, offset:Int = 0)
+	' --- find next asc ---
+	Local length:= data.Length
+	
+	'skip
+	If offset >= length Return - 1
+	
+	'fix negative
+	If offset < 0 offset = 0
+	
+	'scan
+	For offset = offset Until length
+		If data[offset] = asc Return offset
+	Next
+	
+	'nope
+	Return -1
+End
+
+Function XMLFindStringNotInQuotes:Int(needle:String, haystack:String, offset:Int)
+	' --- find character not in quotes ---
+	'get first needle
+	Local needlePos:Int
+	Repeat
+		'check needle pos
+		needlePos = haystack.Find(needle, offset)
+		If needlePos = -1 Return - 1
+	
+		'get quote pos
+		offset = XMLFindNextAsc(haystack, 34, offset)
+	
+		'is the needle before quote
+		If needlePos < offset or offset = -1 Return needlePos
+		
+		'this is a quote so find end of quote
+		offset = XMLFindNextAsc(haystack, 34, offset + 1)
+		If offset = -1 Return - 1
+		offset += 1
+	Forever
+	
+	'nope
+	Return -1
 End
 Public
 
@@ -1651,6 +1700,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 	Local rawChunk:String
 	Local rawChunkIndex:Int
 	Local rawChunkAsc:Int
+	Local rawChunkExit:Bool
 	
 	Local doc:XMLDoc
 	Local parent:XMLNode
@@ -1703,7 +1753,6 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 	'scan the raw text
 	For rawIndex = 0 Until raw.Length
 		rawAsc = raw[rawIndex]
-		'Print "rawAsc = " + rawAsc + " (" + String.FromChar(rawAsc) + ")"
 		
 		If inTag = False
 			Select rawAsc
@@ -1747,6 +1796,13 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 							Return Null
 						EndIf
 						
+						'check for doc already started
+						If doc <> Null
+							'error
+							If error error.Set("doc format should be defined before root node", rawLine, rawColumn, rawIndex)
+							Return Null							
+						EndIf
+						
 						'setup details
 						inTag = True
 						inFormat = True
@@ -1756,6 +1812,37 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						
 						'move the raw index on
 						rawIndex = rawPos + XML_FORMAT_OPEN.Length - 1
+						
+					ElseIf XMLHasStringAtOffset(DOCTYPE_OPEN, raw, rawIndex)
+						'ignore doctype
+						'look for end of comment so we can skip ahead
+						rawPos = XMLFindStringNotInQuotes(DOCTYPE_CLOSE, raw, rawIndex + DOCTYPE_OPEN.Length)
+						If rawPos = -1
+							'error
+							If error error.Set("doctype not closed", rawLine, rawColumn, rawIndex)
+							Return Null
+						EndIf
+						
+						'get the chunk of data
+						rawChunkStart = rawIndex + DOCTYPE_OPEN.Length
+						rawChunkLength = rawPos - (rawIndex + DOCTYPE_OPEN.Length)
+						rawChunkEnd = rawChunkStart + rawChunkLength
+
+						'progress the raw line and column
+						For rawChunkIndex = rawChunkStart Until rawChunkEnd
+							rawChunkAsc = raw[rawChunkIndex]
+							If rawChunkAsc = 10
+								rawLine += 1
+								rawColumn = 1
+							Else
+								rawColumn += 1
+							EndIf
+						Next
+						
+						'move the raw index on
+						rawIndex = rawPos + COMMENT_CLOSE.Length - 1
+						
+						Print raw[rawIndex..]
 						
 					ElseIf XMLHasStringAtOffset(COMMENT_OPEN, raw, rawIndex)
 						'start of a comment
@@ -1928,7 +2015,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 							
 							'set if we need to process the attribute buffer
 							If attributeBuffer.Length processAttributeBuffer = True
-							
+														
 						Case 34, 39'" '
 							'quote
 							quoteAsc = rawAsc
@@ -2030,7 +2117,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 							
 						Default
 							'no speciffic so check generic
-							If rawAsc = 45 or rawAsc = 95 or (rawAsc >= 48 and rawAsc <= 57) or (rawAsc >= 65 and rawAsc <= 90) or (rawAsc >= 97 and rawAsc <= 122)
+							If rawAsc = 45 or rawAsc = 58 or rawAsc = 95 or (rawAsc >= 48 and rawAsc <= 57) or (rawAsc >= 65 and rawAsc <= 90) or (rawAsc >= 97 and rawAsc <= 122)
 								If hasTagClose = True And hasTagName = True
 									'error
 									If error error.Set("unexpected character", rawLine, rawColumn, rawIndex)
