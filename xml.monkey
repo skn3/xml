@@ -842,7 +842,6 @@ Class XMLNode
 
 	Method AddText:XMLNode(data:String)
 		' --- add a text node ---
-		Print "add = " + data
 		'skip
 		If valid = False or text Return Null
 		
