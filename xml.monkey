@@ -28,7 +28,13 @@
 'The lib was written from scratch with no reference.
 
 'version 24
-' - fixed doctype bug
+' - fixed doctype bug (thanks difference, sorry the delay ;)
+' - removed left in print satement (thanks difference, sorry the delay ;)
+' - added support for text/whitespace characters (the value of a node) to be split into child nodes. This should be transparently working and you can still use node.value
+' - added node.text bool to indicate if the node is a text node
+' - added text boolean flag to many of the methods. This allows text nodes to be scanned/returned. The text boolean defaults to false, which will ignore text nodes. For example GetChild(true) would return the first child node, GetChild(false) would find the first NON-text node.
+' - added AddText() method this will either add a child node or append to teh nodes value (depending on the parse mode used)
+' - added example7.monkey demonstrating text nodes
 'version 23
 ' - added tweak/fix to parser to ignore doctype tag (later on can add support) (cheers copper circle)
 ' - added tweak/fix to parser to allow : in tag/attribute names (later can add support for contexts) (cheers copper circle)
@@ -225,6 +231,7 @@ Class XMLStringBuffer
 	
 	Method Trim:Bool()
 		' --- this will trim whitespace from the start and end ---
+
 		'skip
 		If count = 0 Return False
 		
@@ -585,6 +592,7 @@ Class XMLDoc Extends XMLNode
 End
 
 Class XMLNode
+	Field text:Bool
 	Field valid:Bool
 	Field name:String
 	Field value:String
@@ -638,76 +646,85 @@ Class XMLNode
 		
 		Local index:Int
 		
-		'add opening tag
-		'ident
-		If options & XML_STRIP_WHITESPACE = False
-			For index = 0 Until depth
-				buffer.Add(9)
+		'text node?
+		If text
+			'yup text node
+			For index = 0 Until value.Length
+				buffer.Add(value[index])
 			Next
-		EndIf
-		
-		buffer.Add(60)
-		buffer.Add(name)
-		
-		'add attributes
-		For Local id:= EachIn attributes.Keys()
-			buffer.Add(32)
-			buffer.Add(id)
-			buffer.Add(61)
-			buffer.Add(34)
-			buffer.Add(attributes.Get(id).value)
-			buffer.Add(34)
-		Next
-		
-		'check for short tag
-		If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS And Not value.Length
-			'no children so short tag
-			'finish opening tag
-			buffer.Add(32)
-			buffer.Add(47)
-			buffer.Add(62)
-			
-			'add new line
-			If options & XML_STRIP_NEWLINE = False buffer.Add(10)
-
 		Else
-			'has children need to do opening tag only
-			'finish opening tag
-			buffer.Add(62)
-			
-			'add new line
-			If options & XML_STRIP_NEWLINE = False buffer.Add(10)
-			
-			'add children
-			If children.IsEmpty() = False
-				For Local child:= Eachin children
-					child.Export(options, buffer, depth + 1)
-				Next
-			Endif
-			
-			'add value
-			If value.Length 
-				buffer.Add(value)
-				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
-			Endif
-			
-			'add closing tag
+			'nope normal node
+			'add opening tag
 			'ident
 			If options & XML_STRIP_WHITESPACE = False
 				For index = 0 Until depth
 					buffer.Add(9)
 				Next
-			Endif
+			EndIf
 			
-			'tag
 			buffer.Add(60)
-			buffer.Add(47)
 			buffer.Add(name)
-			buffer.Add(62)
 			
-			'add new line
-			If options & XML_STRIP_NEWLINE = False buffer.Add(10)
-		Endif
+			'add attributes
+			For Local id:= EachIn attributes.Keys()
+				buffer.Add(32)
+				buffer.Add(id)
+				buffer.Add(61)
+				buffer.Add(34)
+				buffer.Add(attributes.Get(id).value)
+				buffer.Add(34)
+			Next
+			
+			'check for short tag
+			If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS And Not value.Length
+				'no children so short tag
+				'finish opening tag
+				buffer.Add(32)
+				buffer.Add(47)
+				buffer.Add(62)
+				
+				'add new line
+				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+	
+			Else
+				'has children need to do opening tag only
+				'finish opening tag
+				buffer.Add(62)
+				
+				'add new line
+				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+				
+				'add children
+				If children.IsEmpty() = False
+					For Local child:= Eachin children
+						child.Export(options, buffer, depth + 1)
+					Next
+				Endif
+				
+				'add value
+				If value.Length 
+					buffer.Add(value)
+					If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+				Endif
+				
+				'add closing tag
+				'ident
+				If options & XML_STRIP_WHITESPACE = False
+					For index = 0 Until depth
+						buffer.Add(9)
+					Next
+				Endif
+				
+				'tag
+				buffer.Add(60)
+				buffer.Add(47)
+				buffer.Add(name)
+				buffer.Add(62)
+				
+				'add new line
+				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+			EndIf
+		EndIf
 	End
 	
 	Method GetXMLAttribute:XMLAttribute(id:String)
@@ -715,32 +732,32 @@ Class XMLNode
 		Return attributes.Get(id.ToLower())
 	End
 	
-	Method GetDescendants:Void(result:List<XMLNode>, name:string)
+	Method GetDescendants:Void(result:List<XMLNode>, name:string, text:Bool)
 		' --- internal method for recurse ---
 		'scan children
 		Local child:= firstChild
 		While child
 			'test
-			If child.name = name result.AddLast(child)
+			If child.name = name And (text or child.text = False) result.AddLast(child)
 			
 			'recurse
-			If child.firstChild child.GetDescendants(result, name)
+			If child.firstChild And child.text = False child.GetDescendants(result, name)
 			
 			'next child
 			child = child.nextSibling
 		Wend
 	End
 	
-	Method GetDescendants:Void(result:List<XMLNode>, name:string, query:XMLAttributeQuery)
+	Method GetDescendants:Void(result:List<XMLNode>, name:string, query:XMLAttributeQuery, text:Bool)
 		' --- internal method for recurse ---
 		'scan children
 		Local child:= firstChild
 		While child
 			'test
-			If (name.Length = 0 or child.name = name) And query.Test(child) result.AddLast(child)
+			If (name.Length = 0 or child.name = name) And (text or child.text = False) And query.Test(child) result.AddLast(child)
 			
 			'recurse
-			If child.firstChild child.GetDescendants(result, name, query)
+			If child.firstChild And child.text = False child.GetDescendants(result, name, query)
 			
 			'next child
 			child = child.nextSibling
@@ -749,15 +766,29 @@ Class XMLNode
 	Public
 	
 	'child api
-	Method HasChildren:Bool()
+	Method HasChildren:Bool(text:Bool = False)
 		' --- returns true if has children ---
-		Return firstChild <> Null
+		If firstChild = Null Return False
+		If text Return True
+		
+		'scan children
+		Local child:= firstChild
+		While child
+			'test
+			If child.text = False Return True
+			
+			'next child
+			child = child.nextSibling
+		Wend
+		
+		'nope
+		Return False
 	End
 	
 	Method AddChild:XMLNode(name:String, attributes:String = "", value:String = "")
 		' --- add a child node ---
 		'skip
-		If valid = False Return Null
+		If valid = False or text Return Null
 		
 		'create child
 		Local child:= New XMLNode(name)
@@ -809,6 +840,45 @@ Class XMLNode
 		Return child
 	End
 
+	Method AddText:XMLNode(data:String)
+		' --- add a text node ---
+		Print "add = " + data
+		'skip
+		If valid = False or text Return Null
+		
+		'always add to the value
+		value += data
+		
+		'create text node
+		Local child:= New XMLNode(name)
+		child.text = True
+		child.doc = doc
+		child.parent = Self
+		child.value = data
+		
+		'setup link nodes
+		If lastChild
+			'not first child
+			'set previously last child to point next to new child
+			lastChild.nextSibling = child
+			
+			'set new child previous to last child
+			child.previousSibling = lastChild
+			
+			'update this last child to the new child
+			lastChild = child
+		Else
+			'first child
+			firstChild = child
+			lastChild = child
+		EndIf
+		
+		'add to self
+		children.AddLast(child)
+		
+		Return child
+	End
+	
 	Method RemoveChild:Void(child:XMLNode)
 		' --- remove child ---
 		'skip
@@ -832,9 +902,26 @@ Class XMLNode
 		
 		'remove from list
 		children.Remove(child)
+		
+		'do we need to rebuild the value
+		If child.text
+			Local buffer:= New XMLStringBuffer()
+			
+			'scan text siblings
+			Local pointer:= firstChild
+			While pointer
+				If pointer.text
+					buffer.Add(pointer.value)
+				EndIf
+				pointer = pointer.nextSibling
+			Wend
+			
+			'save value
+			value = buffer.value
+		EndIf
 	End
 	
-	Method ClearChildren:Void()
+	Method ClearChildren:Void(text:Bool = False)
 		' --- clears all children ---
 		'skip
 		If valid = False or firstChild = Null Return
@@ -842,18 +929,25 @@ Class XMLNode
 		'iterate
 		Local child:= firstChild
 		While child
-			'call child to be freed
-			child.Free()
-			
-			'dettach from doc and parent
-			child.previousSibling = Null
-			child.nextSibling = Null
-			child.parent = Null
-			child.doc = Null
-			
-			'next child
-			child = child.nextSibling
+			If text or child.text = False
+				'call child to be freed
+				child.Free()
+				
+				'dettach from doc and parent
+				child.previousSibling = Null
+				child.nextSibling = Null
+				child.parent = Null
+				child.doc = Null
+				
+				'next child
+				child = child.nextSibling
+			EndIf
 		Wend
+		
+		'reset value
+		If text
+			value = ""
+		EndIf
 		
 		'reset lists
 		children.Clear()
@@ -861,7 +955,31 @@ Class XMLNode
 		lastChild = Null
 	End
 	
-	Method GetNextSibling:XMLNode(name:String = "")
+	Method ClearText:Void()
+		' --- clear text from node ---
+		'reset teh value
+		value = ""
+		
+		'clear all text nodes
+		Local pointer:= firstChild
+		Local nextPointer:XMLNode
+		While pointer
+			nextPointer = pointer.nextSibling
+			If pointer.text
+				'call child to be freed
+				pointer.Free()
+				
+				'dettach from doc and parent
+				pointer.previousSibling = Null
+				pointer.nextSibling = Null
+				pointer.parent = Null
+				pointer.doc = Null
+			EndIf
+			pointer = nextPointer
+		Wend
+	End
+	
+	Method GetNextSibling:XMLNode(name:String = "", text:Bool = False)
 		' --- search for next sibling with matching tag name ---
 		'skip
 		If nextSibling = Null Return doc.nullNode
@@ -875,7 +993,7 @@ Class XMLNode
 		'scan siblings
 		Local pointer:= nextSibling
 		While pointer
-			If pointer.name = name Return pointer
+			If pointer.name = name And (text or pointer.text = False) Return pointer
 			pointer = pointer.nextSibling
 		Wend
 		
@@ -883,7 +1001,7 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetNextSibling:XMLNode(name:String, attributes:String)
+	Method GetNextSibling:XMLNode(name:String, attributes:String, text:Bool = False)
 		' --- search for next sibling with matching tag name ---
 		'skip
 		If nextSibling = Null Return doc.nullNode
@@ -908,7 +1026,7 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetPreviousSibling:XMLNode(name:String = "")
+	Method GetPreviousSibling:XMLNode(name:String = "", text:Bool = False)
 		' --- search for previous sibling with matching tag name ---
 		'skip
 		If previousSibling = Null Return doc.nullNode
@@ -930,7 +1048,7 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetPreviousSibling:XMLNode(name:String, attributes:String)
+	Method GetPreviousSibling:XMLNode(name:String, attributes:String, text:Bool = False)
 		' --- search for previous sibling with matching tag name ---
 		'skip
 		If previousSibling = Null Return doc.nullNode
@@ -955,16 +1073,31 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetChild:XMLNode()
+	Method GetChild:XMLNode(text:Bool = False)
 		' --- gets the first child ---
 		'skip
 		If firstChild = Null Return doc.nullNode
 		
-		'return
-		Return firstChild
+		'return quickly
+		If text or firstChild.text = False
+			Return firstChild
+		EndIf
+		
+		'scan children
+		Local child:= firstChild
+		While child
+			'test
+			If child.text = False Return child
+			
+			'next child
+			child = child.nextSibling
+		Wend
+		
+		'nope
+		Return doc.nullNode
 	End
 	
-	Method GetChild:XMLNode(name:String)
+	Method GetChild:XMLNode(name:String, text:Bool = False)
 		' --- get first child by name ---
 		'skip
 		If firstChild = Null Return doc.nullNode
@@ -976,7 +1109,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If child.name = name Return child
+			If child.name = name And (text or child.text = False) Return child
 			
 			'next child
 			child = child.nextSibling
@@ -986,7 +1119,7 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetChild:XMLNode(name:String, attributes:String)
+	Method GetChild:XMLNode(name:String, attributes:String, text:Bool = False)
 		' --- get first child by name with matching attributes ---
 		'skip
 		If firstChild = Null Return doc.nullNode
@@ -1001,7 +1134,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If child.name = name And query.Test(child) Return child
+			If child.name = name And (text or child.text = False) And query.Test(child) Return child
 			
 			'next child
 			child = child.nextSibling
@@ -1011,7 +1144,7 @@ Class XMLNode
 		Return doc.nullNode
 	End
 	
-	Method GetChildren:List<XMLNode>(result:List<XMLNode> = Null)
+	Method GetChildren:List<XMLNode>(result:List<XMLNode> = Null, text:Bool = False)
 		' --- get all children ---
 		If result = Null result = New List<XMLNode>
 		
@@ -1023,7 +1156,7 @@ Class XMLNode
 			Local child:= firstChild
 			While child
 				'Add child
-				result.AddLast(child)
+				If text or child.text = False result.AddLast(child)
 				
 				'next child
 				child = child.nextSibling
@@ -1034,7 +1167,7 @@ Class XMLNode
 		Return result
 	End
 	
-	Method GetChildren:List<XMLNode>(name:String, result:List<XMLNode> = Null)
+	Method GetChildren:List<XMLNode>(name:String, result:List<XMLNode> = Null, text:Bool = False)
 		' --- get children with name ---
 		If result = Null result = New List<XMLNode>
 		
@@ -1049,7 +1182,7 @@ Class XMLNode
 			Local child:= firstChild
 			While child
 				'test
-				If child.name = name result.AddLast(child)
+				If child.name = name And (text or child.text = False) result.AddLast(child)
 				
 				'next child
 				child = child.nextSibling
@@ -1060,7 +1193,7 @@ Class XMLNode
 		Return result
 	End
 		
-	Method GetChildren:List<XMLNode>(name:String, attributes:String, result:List<XMLNode> = Null)
+	Method GetChildren:List<XMLNode>(name:String, attributes:String, result:List<XMLNode> = Null, text:Bool = False)
 		' --- get children with name ---
 		If result = Null result = New List<XMLNode>
 		
@@ -1078,7 +1211,7 @@ Class XMLNode
 			Local child:= firstChild
 			While child
 				'test
-				If (name.Length = 0 or child.name = name) And query.Test(child) result.AddLast(child)
+				If (name.Length = 0 or child.name = name) And (text or child.text = False) And query.Test(child) result.AddLast(child)
 				
 				'next child
 				child = child.nextSibling
@@ -1089,7 +1222,7 @@ Class XMLNode
 		Return result
 	End
 
-	Method GetDescendants:List<XMLNode>(result:List<XMLNode> = Null)
+	Method GetDescendants:List<XMLNode>(result:List<XMLNode> = Null, text:Bool = False)
 		' --- get all descendants ---		
 		If result = Null result = New List<XMLNode>
 		
@@ -1100,13 +1233,13 @@ Class XMLNode
 		name = name.ToLower()
 		
 		'call internal recursive method
-		GetDescendants(result)
+		GetDescendants(result, text)
 		
 		'return result
 		Return result
 	End
 			
-	Method GetDescendants:List<XMLNode>(name:String,result:List<XMLNode> = Null)
+	Method GetDescendants:List<XMLNode>(name:String, result:List<XMLNode> = Null, text:Bool = False)
 		' --- get all descendants that match name ---		
 		If result = Null result = New List<XMLNode>
 		
@@ -1117,13 +1250,13 @@ Class XMLNode
 		name = name.ToLower()
 		
 		'call internal recursive method
-		GetDescendants(result, name)
+		GetDescendants(result, name, text)
 		
 		'return result
 		Return result
 	End
 	
-	Method GetDescendants:List<XMLNode>(name:String, attributes:String, result:List<XMLNode> = Null)
+	Method GetDescendants:List<XMLNode>(name:String, attributes:String, result:List<XMLNode> = Null, text:Bool = False)
 		' --- get all descendants that match name ---		
 		If result = Null result = New List<XMLNode>
 		
@@ -1137,7 +1270,7 @@ Class XMLNode
 		Local query:= New XMLAttributeQuery(attributes)
 		
 		'call internal recursive method
-		GetDescendants(result, name, query)
+		GetDescendants(result, name, query, text)
 		
 		'return result
 		Return result
@@ -1224,16 +1357,30 @@ Class XMLNode
 		Return result
 	End
 	
-	Method CountChildren:Int()
+	Method CountChildren:Int(text:Bool = False)
 		' --- count all children in node ---
 		'skip
 		If firstChild = Null Return 0
 		
 		'count
-		Return children.Count()
+		If text
+			Return children.Count()
+		EndIf
+		
+		'scan children
+		Local total:Int
+		Local child:= firstChild
+		While child
+			'test
+			If child.text = False count += 1
+			
+			'next child
+			child = child.nextSibling
+		Wend
+		Return total
 	End
 	
-	Method CountChildren:Int(name:String)
+	Method CountChildren:Int(name:String, text:Bool = False)
 		' --- count all children with matching tag ---
 		'skip
 		If firstChild = Null Return 0
@@ -1249,7 +1396,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'add to count
-			If child.name = name total += 1
+			If child.name = name And (text or child.text = False) total += 1
 		
 			'next child
 			child = child.nextSibling
@@ -1259,7 +1406,7 @@ Class XMLNode
 		Return total
 	End
 	
-	Method CountChildren:Int(name:String, attributes:String)
+	Method CountChildren:Int(name:String, attributes:String, text:Bool = False)
 		' --- count all children with matching tag and attributes ---
 		'skip
 		If firstChild = Null Return 0
@@ -1278,7 +1425,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'add to count
-			If (name.Length = 0 or child.name = name) And query.Test(child) total += 1
+			If (name.Length = 0 or child.name = name) And (text or child.text = False) And query.Test(child) total += 1
 			
 			'next child
 			child = child.nextSibling
@@ -1707,6 +1854,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 	Local doc:XMLDoc
 	Local parent:XMLNode
 	Local current:XMLNode
+	Local textNode:XMLNode
 	
 	Local whitespaceBuffer:= New XMLStringBuffer(1024)
 	Local attributeBuffer:= New XMLStringBuffer(1024)
@@ -1788,6 +1936,21 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 					
 				Case 60'<
 					'tag start
+					
+					'do we need to add text
+					If parent And whitespaceBuffer.Length
+						'trim the whitespace
+						If options & XML_STRIP_WHITESPACE = True
+							whitespaceBuffer.Trim()
+						EndIf
+						
+						'add it
+						If whitespaceBuffer.Length
+							textNode = parent.AddText(whitespaceBuffer.value)
+							whitespaceBuffer.Clear()
+						EndIf
+					EndIf
+					
 					'check for special tags
 					If XMLHasStringAtOffset(XML_FORMAT_OPEN, raw, rawIndex)
 						'start of a xml tag
@@ -1910,6 +2073,12 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						'add it to the parent value
 						whitespaceBuffer.Add(raw, rawChunkStart, rawChunkLength)
 						
+						'do we need to add text
+						If parent And whitespaceBuffer.Length
+							textNode = parent.AddText(whitespaceBuffer.value)
+							whitespaceBuffer.Clear()
+						EndIf
+						
 						'move the raw index on
 						rawIndex = rawPos + CDATA_CLOSE.Length - 1
 						
@@ -1920,15 +2089,20 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						'need to dummp any whitespace into the parent
 						If whitespaceBuffer.Length
 							'trim the whitespace
-							If options & XML_STRIP_WHITESPACE = False
-								'no trimming
-								parent.value += whitespaceBuffer.value
-								whitespaceBuffer.Clear()
-							Else
-								'need to trim
+							If options & XML_STRIP_WHITESPACE = True
 								whitespaceBuffer.Trim()
+							EndIf
+							
+							'add whitespace if need
+							If whitespaceBuffer.Length
+								'trim the whitespace
+								If options & XML_STRIP_WHITESPACE = True
+									whitespaceBuffer.Trim()
+								EndIf
+								
+								'add it
 								If whitespaceBuffer.Length
-									parent.value += whitespaceBuffer.value
+									textNode = parent.AddText(whitespaceBuffer.value)
 									whitespaceBuffer.Clear()
 								EndIf
 							EndIf
@@ -2286,8 +2460,16 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 							'the tag does not close itself
 							'need to dummp any whitespace into the closing tag
 							If whitespaceBuffer.Length
-								parent.value += whitespaceBuffer.value
-								whitespaceBuffer.Clear()
+								'trim the whitespace
+								If options & XML_STRIP_WHITESPACE = True
+									whitespaceBuffer.Trim()
+								EndIf
+								
+								'add it
+								If whitespaceBuffer.Length
+									parent.AddText(whitespaceBuffer.value)
+									whitespaceBuffer.Clear()
+								EndIf
 							EndIf
 						
 							'remove from stack
