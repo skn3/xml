@@ -6,7 +6,7 @@ Import xml
 
 Function Main()
 	Local error:XMLError = New XMLError
-	Local doc:XMLDoc = ParseXML(LoadString("data.xml"), error, XML_STRIP_WHITESPACE)
+	Local doc:XMLDoc = ParseXML(LoadString("data.xml"), error)
 	Local node:XMLNode = Null
 
 	If error.error = False

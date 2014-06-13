@@ -27,6 +27,9 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 25
+' - added so newlines in XML will be included in xml text/values
+' - added so XML_STRIP_NEWLINE can now be used in ParseXML to strip any newlines within text/value
 'version 24
 ' - fixed doctype bug (thanks difference, sorry the delay ;)
 ' - removed left in print satement (thanks difference, sorry the delay ;)
@@ -236,7 +239,7 @@ Class XMLStringBuffer
 		If count = 0 Return False
 		
 		'quick trim
-		If (count = 1 and (data[0] = 32 or data[0] = 9)) or (count = 2 And (data[0] = 32 or data[0] = 9) And (data[1] = 32 or data[1] = 9))
+		If (count = 1 and (data[0] = 32 or data[0] = 9 or data[0] = 10)) or (count = 2 And (data[0] = 32 or data[0] = 9 or data[0] = 10) And (data[1] = 32 or data[1] = 9 or data[1] = 10))
 			Clear()
 			Return True
 		EndIf
@@ -245,7 +248,7 @@ Class XMLStringBuffer
 		'get start trim
 		Local startIndex:Int
 		For startIndex = 0 Until count
-			If data[startIndex] <> 32 And data[startIndex] <> 9 Exit
+			If data[startIndex] <> 32 And data[startIndex] <> 9 And data[startIndex] <> 10 Exit
 		Next
 		
 		'check if there was only whitespace
@@ -257,7 +260,7 @@ Class XMLStringBuffer
 		'get end trim
 		Local endIndex:Int
 		For endIndex = count - 1 To 0 Step - 1
-			If data[endIndex] <> 32 And data[endIndex] <> 9 Exit
+			If data[endIndex] <> 32 And data[endIndex] <> 9 and data[endIndex] <> 10 Exit
 		Next
 
 		'check for no trim
@@ -1929,6 +1932,11 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 					'update line and column
 					rawLine += 1
 					rawColumn = 1
+					
+					'add to whitespace?
+					If options & XML_STRIP_NEWLINE = False
+						whitespaceBuffer.Add(rawAsc)
+					EndIf
 					
 				Case 13'<carriage return>
 					'ignore stupid char
