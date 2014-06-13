@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 24
+' - fixed doctype bug
 'version 23
 ' - added tweak/fix to parser to ignore doctype tag (later on can add support) (cheers copper circle)
 ' - added tweak/fix to parser to allow : in tag/attribute names (later can add support for contexts) (cheers copper circle)
@@ -1817,6 +1819,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						'ignore doctype
 						'look for end of comment so we can skip ahead
 						rawPos = XMLFindStringNotInQuotes(DOCTYPE_CLOSE, raw, rawIndex + DOCTYPE_OPEN.Length)
+
 						If rawPos = -1
 							'error
 							If error error.Set("doctype not closed", rawLine, rawColumn, rawIndex)
@@ -1827,7 +1830,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						rawChunkStart = rawIndex + DOCTYPE_OPEN.Length
 						rawChunkLength = rawPos - (rawIndex + DOCTYPE_OPEN.Length)
 						rawChunkEnd = rawChunkStart + rawChunkLength
-
+						
 						'progress the raw line and column
 						For rawChunkIndex = rawChunkStart Until rawChunkEnd
 							rawChunkAsc = raw[rawChunkIndex]
@@ -1840,9 +1843,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						Next
 						
 						'move the raw index on
-						rawIndex = rawPos + COMMENT_CLOSE.Length - 1
-						
-						Print raw[rawIndex..]
+						rawIndex = rawPos + DOCTYPE_CLOSE.Length - 1
 						
 					ElseIf XMLHasStringAtOffset(COMMENT_OPEN, raw, rawIndex)
 						'start of a comment
