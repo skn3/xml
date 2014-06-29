@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 26
+' - fixed typo in missing variable
 'version 25
 ' - added so newlines in XML will be included in xml text/values
 ' - added so XML_STRIP_NEWLINE can now be used in ParseXML to strip any newlines within text/value
@@ -1374,7 +1376,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If child.text = False count += 1
+			If child.text = False total += 1
 			
 			'next child
 			child = child.nextSibling
