@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 27
+' - small mem ref error when removing path list node
 'version 26
 ' - fixed typo in missing variable
 'version 25
@@ -629,8 +631,10 @@ Class XMLNode
 	Method Free:Void()
 		' --- used when the node is removed the doc ---
 		'remove from paths list
-		pathListNode.Remove()
-		pathListNode = Null
+		if pathListNode
+			pathListNode.Remove()
+			pathListNode = Null
+		EndIf
 		
 		'recurse
 		If firstChild
