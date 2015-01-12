@@ -113,8 +113,6 @@
 ' - first release
 Strict
 
-#REFLECTION_FILTER += "xml*"
-
 Import monkey.list
 Import monkey.map
 
