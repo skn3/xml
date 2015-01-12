@@ -27,6 +27,10 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 32
+' - improved performance by storing list node pointers when adding/removing xml nodes
+' - made it so node.value and node.value = works for text type nodes. Will rebuild parent text value if needed
+' - fixed ClearText as it was not properly updating the node pointers so text remained
 'version 31
 ' - casing now remains in provided format for node attributes
 'version 30
@@ -629,6 +633,7 @@ Class XMLNode
 	Field attributes:= New StringMap<XMLAttribute>
 	
 	Private
+	Field parentListNode:list.Node<XMLNode>
 	Field pathList:List<XMLNode>
 	Field pathListNode:list.Node<XMLNode>
 	Public
@@ -785,6 +790,22 @@ Class XMLNode
 			child = child.nextSibling
 		Wend
 	End
+	
+	Method RebuildValue:Void()
+		Local buffer:= New XMLStringBuffer()
+			
+		'scan text siblings
+		Local pointer:= firstChild
+		While pointer
+			If pointer.text
+				buffer.Add(pointer.fullValue)
+			EndIf
+			pointer = pointer.nextSibling
+		Wend
+			
+		'save value
+		fullValue = buffer.value
+	End
 	Public
 	
 	'properties
@@ -802,8 +823,15 @@ Class XMLNode
 	End
 	
 	Method value:Void(newValue:String) Property
-		ClearText()
-		AddText(newValue)
+		If text
+			fullValue = newValue
+			If parent
+				parent.RebuildValue()
+			EndIf
+		Else
+			ClearText()
+			AddText(newValue)
+		EndIf
 	End
 	
 	'child api
@@ -875,7 +903,7 @@ Class XMLNode
 		EndIf
 		
 		'add to self
-		children.AddLast(child)
+		child.parentListNode = children.AddLast(child)
 		
 		'return it
 		Return child
@@ -914,7 +942,7 @@ Class XMLNode
 		EndIf
 		
 		'add to self
-		children.AddLast(child)
+		child.parentListNode = children.AddLast(child)
 		
 		Return child
 	End
@@ -941,23 +969,12 @@ Class XMLNode
 		child.nextSibling = Null
 		
 		'remove from list
-		children.Remove(child)
+		child.parentListNode.Remove()
+		child.parentListNode = Null
 		
 		'do we need to rebuild the value
 		If child.text
-			Local buffer:= New XMLStringBuffer()
-			
-			'scan text siblings
-			Local pointer:= firstChild
-			While pointer
-				If pointer.text
-					buffer.Add(pointer.fullValue)
-				EndIf
-				pointer = pointer.nextSibling
-			Wend
-			
-			'save value
-			fullValue = buffer.value
+			RebuildValue()
 		EndIf
 	End
 	
@@ -974,6 +991,7 @@ Class XMLNode
 				child.Free()
 				
 				'dettach from doc and parent
+				child.parentListNode = Null
 				child.previousSibling = Null
 				child.nextSibling = Null
 				child.parent = Null
@@ -1008,6 +1026,18 @@ Class XMLNode
 			If pointer.text
 				'call child to be freed
 				pointer.Free()
+				
+				'update first and last pointer
+				If lastChild = pointer lastChild = pointer.previousSibling
+				If firstChild = pointer firstChild = pointer.nextSibling
+		
+				'update sibling pointers
+				If pointer.previousSibling pointer.previousSibling.nextSibling = pointer.nextSibling
+				If pointer.nextSibling pointer.nextSibling.previousSibling = pointer.previousSibling
+				
+				'remove from list
+				pointer.parentListNode.Remove()
+				pointer.parentListNode = Null
 				
 				'dettach from doc and parent
 				pointer.previousSibling = Null
