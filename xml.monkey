@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 28
+' - small tweak so that if a node has no children but a value e.g. <value>SomeText</value> it will be formatted onto a single line.
 'version 27
 ' - small mem ref error when removing path list node
 'version 26
@@ -701,7 +703,7 @@ Class XMLNode
 				buffer.Add(62)
 				
 				'add new line
-				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+				If options & XML_STRIP_NEWLINE = False and children.IsEmpty() = False buffer.Add(10)
 				
 				'add children
 				If children.IsEmpty() = False
@@ -713,12 +715,12 @@ Class XMLNode
 				'add value
 				If value.Length 
 					buffer.Add(value)
-					If options & XML_STRIP_NEWLINE = False buffer.Add(10)
+					If options & XML_STRIP_NEWLINE = False and children.IsEmpty() = False buffer.Add(10)
 				Endif
 				
 				'add closing tag
 				'ident
-				If options & XML_STRIP_WHITESPACE = False
+				If options & XML_STRIP_WHITESPACE = False and children.IsEmpty() = False
 					For index = 0 Until depth
 						buffer.Add(9)
 					Next
