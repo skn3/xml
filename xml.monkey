@@ -27,6 +27,10 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 31
+' - casing now remains in provided format for node attributes
+'version 30
+' - fixed long standing (but apparently no one caught??) errors with setting/getting value of xml node
 'version 29
 ' - xml nodes now keep their original casing, this has changed the behaviour of node.name, it will return the unmodified name
 'version 28
@@ -444,7 +448,7 @@ Class XMLAttributeQuery
 				Select items[index].id
 					Case "value"
 						'check conditions for fail
-						If (items[index].required And node.value <> items[index].value) Return False
+						If (items[index].required And node.fullValue <> items[index].value) Return False
 				End
 			EndIf
 		Next
@@ -609,8 +613,8 @@ Class XMLNode
 	Private
 	Field nameNormalCase:String
 	Field nameLowerCase:String
+	Field fullValue:String
 	Public
-	Field value:String
 	Field path:String
 	Field doc:XMLDoc
 	Field parent:XMLNode
@@ -670,8 +674,8 @@ Class XMLNode
 		'text node?
 		If text
 			'yup text node
-			For index = 0 Until value.Length
-				buffer.Add(value[index])
+			For index = 0 Until fullValue.Length
+				buffer.Add(fullValue[index])
 			Next
 		Else
 			'nope normal node
@@ -687,12 +691,14 @@ Class XMLNode
 			buffer.Add(nameNormalCase)
 			
 			'add attributes
+			Local attribute:XMLAttribute
 			For Local id:= EachIn attributes.Keys()
+				attribute = attributes.Get(id)
 				buffer.Add(32)
-				buffer.Add(id)
+				buffer.Add(attribute.idNormalCase)
 				buffer.Add(61)
 				buffer.Add(34)
-				buffer.Add(attributes.Get(id).value)
+				buffer.Add(attribute.value)
 				buffer.Add(34)
 			Next
 			
@@ -791,6 +797,15 @@ Class XMLNode
 		nameLowerCase = newName.ToLower()
 	End
 	
+	Method value:String() Property
+		Return fullValue
+	End
+	
+	Method value:Void(newValue:String) Property
+		ClearText()
+		AddText(newValue)
+	End
+	
 	'child api
 	Method HasChildren:Bool(text:Bool = False)
 		' --- returns true if has children ---
@@ -820,7 +835,7 @@ Class XMLNode
 		Local child:= New XMLNode(name)
 		child.doc = doc
 		child.parent = Self
-		child.value = value
+		child.AddText(value)
 		
 		'setup path
 		child.path = path + "/" + child.nameLowerCase
@@ -872,14 +887,14 @@ Class XMLNode
 		If valid = False or text Return Null
 		
 		'always add to the value
-		value += data
+		fullValue += data
 		
 		'create text node
 		Local child:= New XMLNode(nameNormalCase)
 		child.text = True
 		child.doc = doc
 		child.parent = Self
-		child.value = data
+		child.fullValue = data
 		
 		'setup link nodes
 		If lastChild
@@ -936,13 +951,13 @@ Class XMLNode
 			Local pointer:= firstChild
 			While pointer
 				If pointer.text
-					buffer.Add(pointer.value)
+					buffer.Add(pointer.fullValue)
 				EndIf
 				pointer = pointer.nextSibling
 			Wend
 			
 			'save value
-			value = buffer.value
+			fullValue = buffer.value
 		EndIf
 	End
 	
@@ -971,7 +986,7 @@ Class XMLNode
 		
 		'reset value
 		If text
-			value = ""
+			fullValue = ""
 		EndIf
 		
 		'reset lists
@@ -983,7 +998,7 @@ Class XMLNode
 	Method ClearText:Void()
 		' --- clear text from node ---
 		'reset teh value
-		value = ""
+		fullValue = ""
 		
 		'clear all text nodes
 		Local pointer:= firstChild
@@ -1480,15 +1495,16 @@ Class XMLNode
 		If valid = False Return
 		
 		'fix id casing
-		id = id.ToLower()
+		Local lowerId:= id.ToLower()
 		
 		'see if the attribute exists already
-		Local attribute:= attributes.Get(id)
+		Local attribute:= attributes.Get(lowerId)
 		If attribute = Null
 			'create new attribute
-			attributes.Insert(id, New XMLAttribute(id, ""))
+			attributes.Insert(lowerId, New XMLAttribute(id, ""))
 		Else
 			'set existing attribute
+			attribute.idNormalCase = id
 			attribute.value = ""
 		EndIf
 	End
@@ -1499,15 +1515,16 @@ Class XMLNode
 		If valid = False Return
 		
 		'fix id casing
-		id = id.ToLower()
+		Local lowerId:= id.ToLower()
 		
 		'see if the attribute exists already
-		Local attribute:= attributes.Get(id)
+		Local attribute:= attributes.Get(lowerId)
 		If attribute = Null
 			'create new attribute
-			attributes.Insert(id, New XMLAttribute(id, String(int(value))))
+			attributes.Insert(lowerId, New XMLAttribute(id, String(int(value))))
 		Else
 			'set existing attribute
+			attribute.idNormalCase = id
 			attribute.value = String(int(value))
 		EndIf
 	End
@@ -1518,15 +1535,16 @@ Class XMLNode
 		If valid = False Return
 		
 		'fix id casing
-		id = id.ToLower()
+		Local lowerId:= id.ToLower()
 		
 		'see if the attribute exists already
-		Local attribute:= attributes.Get(id)
+		Local attribute:= attributes.Get(lowerId)
 		If attribute = Null
 			'create new attribute
-			attributes.Insert(id, New XMLAttribute(id, String(value)))
+			attributes.Insert(lowerId, New XMLAttribute(id, String(value)))
 		Else
 			'set existing attribute
+			attribute.idNormalCase = id
 			attribute.value = String(value)
 		EndIf
 	End
@@ -1537,15 +1555,16 @@ Class XMLNode
 		If valid = False Return
 		
 		'fix id casing
-		id = id.ToLower()
+		Local lowerId:= id.ToLower()
 		
 		'see if the attribute exists already
-		Local attribute:= attributes.Get(id)
+		Local attribute:= attributes.Get(lowerId)
 		If attribute = Null
 			'create new attribute
-			attributes.Insert(id, New XMLAttribute(id, String(value)))
+			attributes.Insert(lowerId, New XMLAttribute(id, String(value)))
 		Else
 			'set existing attribute
+			attribute.idNormalCase = id
 			attribute.value = String(value)
 		EndIf
 	End
@@ -1556,15 +1575,16 @@ Class XMLNode
 		If valid = False Return
 		
 		'fix id casing
-		id = id.ToLower()
+		Local lowerId:= id.ToLower()
 		
 		'see if the attribute exists already
-		Local attribute:= attributes.Get(id)
+		Local attribute:= attributes.Get(lowerId)
 		If attribute = Null
 			'create new attribute
-			attributes.Insert(id, New XMLAttribute(id, value))
+			attributes.Insert(lowerId, New XMLAttribute(id, value))
 		Else
 			'set existing attribute
+			attribute.idNormalCase = id
 			attribute.value = value
 		EndIf
 	End
@@ -1780,12 +1800,14 @@ Class XMLNode
 End
 
 Class XMLAttribute
-	Field id:String
+	Field idLowercase:String
+	Field idNormalCase:String
 	Field value:String
 	
 	'constructor/destructor
 	Method New(id:String, value:String)
-		Self.id = id
+		Self.idLowercase = id.ToLower()
+		Self.idNormalCase = id
 		Self.value = value
 	End
 End
@@ -1929,7 +1951,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 		If inTag = False
 			Select rawAsc
 				Case 9, 32'<tab><space>
-					If whitespaceBuffer.Length or (parent And parent.value.Length)
+					If whitespaceBuffer.Length or (parent And parent.fullValue.Length)
 						'check for skipping duplicate whitespace
 						Local lastAsc:Int = whitespaceBuffer.Last()
 						If options & XML_STRIP_WHITESPACE = False or (whitespaceBuffer.Length And lastAsc <> 9 And lastAsc <> 32)
@@ -2415,7 +2437,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 					Else
 						If hasAttributeId = False
 							'attribute id
-							attributeId = attributeBuffer.value.ToLower()
+							attributeId = attributeBuffer.value
 							hasAttributeId = True
 						Else
 							'attribute value
