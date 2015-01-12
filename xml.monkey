@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 29
+' - xml nodes now keep their original casing, this has changed the behaviour of node.name, it will return the unmodified name
 'version 28
 ' - small tweak so that if a node has no children but a value e.g. <value>SomeText</value> it will be formatted onto a single line.
 'version 27
@@ -110,6 +112,8 @@
 'version 1
 ' - first release
 Strict
+
+#REFLECTION_FILTER += "xml*"
 
 Import monkey.list
 Import monkey.map
@@ -549,7 +553,8 @@ Class XMLDoc Extends XMLNode
 		nullNode.doc = Self
 		
 		'fix casing
-		Self.name = name.ToLower()
+		Self.nameNormalCase = name
+		Self.nameLowerCase = name.ToLower()
 		Self.version = version
 		Self.encoding = encoding
 		
@@ -603,7 +608,10 @@ End
 Class XMLNode
 	Field text:Bool
 	Field valid:Bool
-	Field name:String
+	Private
+	Field nameNormalCase:String
+	Field nameLowerCase:String
+	Public
 	Field value:String
 	Field path:String
 	Field doc:XMLDoc
@@ -626,7 +634,10 @@ Class XMLNode
 	'constructor/destructor
 	Method New(name:String, valid:Bool = True)
 		' --- create node with name ---
-		If name.Length Self.name = name.ToLower()'fix casing
+		If name.Length
+			Self.nameNormalCase = name
+			Self.nameLowerCase = name.ToLower()'fix casing
+		EndIf
 		Self.valid = valid
 	End
 	
@@ -656,6 +667,7 @@ Class XMLNode
 		If buffer = Null buffer = New XMLStringBuffer(1024)
 		
 		Local index:Int
+		Local hasNonTextNodes:Bool
 		
 		'text node?
 		If text
@@ -674,7 +686,7 @@ Class XMLNode
 			EndIf
 			
 			buffer.Add(60)
-			buffer.Add(name)
+			buffer.Add(nameNormalCase)
 			
 			'add attributes
 			For Local id:= EachIn attributes.Keys()
@@ -687,7 +699,7 @@ Class XMLNode
 			Next
 			
 			'check for short tag
-			If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS And Not value.Length
+			If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS
 				'no children so short tag
 				'finish opening tag
 				buffer.Add(32)
@@ -699,28 +711,23 @@ Class XMLNode
 	
 			Else
 				'has children need to do opening tag only
+				hasNonTextNodes = HasChildren()
+				
 				'finish opening tag
 				buffer.Add(62)
 				
 				'add new line
-				If options & XML_STRIP_NEWLINE = False and children.IsEmpty() = False buffer.Add(10)
+				If options & XML_STRIP_NEWLINE = False and hasNonTextNodes buffer.Add(10)
 				
 				'add children
-				If children.IsEmpty() = False
-					For Local child:= Eachin children
-						child.Export(options, buffer, depth + 1)
-					Next
-				Endif
-				
-				'add value
-				If value.Length 
-					buffer.Add(value)
-					If options & XML_STRIP_NEWLINE = False and children.IsEmpty() = False buffer.Add(10)
-				Endif
+				'has mix of nodes/text
+				For Local child:= Eachin children
+					child.Export(options, buffer, depth + 1)
+				Next
 				
 				'add closing tag
 				'ident
-				If options & XML_STRIP_WHITESPACE = False and children.IsEmpty() = False
+				If options & XML_STRIP_WHITESPACE = False and hasNonTextNodes
 					For index = 0 Until depth
 						buffer.Add(9)
 					Next
@@ -729,7 +736,7 @@ Class XMLNode
 				'tag
 				buffer.Add(60)
 				buffer.Add(47)
-				buffer.Add(name)
+				buffer.Add(nameNormalCase)
 				buffer.Add(62)
 				
 				'add new line
@@ -749,10 +756,10 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If child.name = name And (text or child.text = False) result.AddLast(child)
+			If child.nameLowerCase = name And (text or child.text = False) result.AddLast(child)
 			
 			'recurse
-			If child.firstChild And child.text = False child.GetDescendants(result, name)
+			If child.firstChild And child.text = False child.GetDescendants(result, name, text)
 			
 			'next child
 			child = child.nextSibling
@@ -765,16 +772,26 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If (name.Length = 0 or child.name = name) And (text or child.text = False) And query.Test(child) result.AddLast(child)
+			If (name.Length = 0 or child.nameLowerCase = name) And (text or child.text = False) And query.Test(child) result.AddLast(child)
 			
 			'recurse
-			If child.firstChild And child.text = False child.GetDescendants(result, name, query)
+			If child.firstChild And child.text = False child.GetDescendants(result, name, query, text)
 			
 			'next child
 			child = child.nextSibling
 		Wend
 	End
 	Public
+	
+	'properties
+	Method name:String() Property
+		Return nameNormalCase
+	End
+	
+	Method name:Void(newName:string) Property
+		nameNormalCase = newName
+		nameLowerCase = newName.ToLower()
+	End
 	
 	'child api
 	Method HasChildren:Bool(text:Bool = False)
@@ -808,7 +825,7 @@ Class XMLNode
 		child.value = value
 		
 		'setup path
-		child.path = path + "/" + child.name
+		child.path = path + "/" + child.nameLowerCase
 		child.pathList = doc.paths.Get(child.path)
 		If child.pathList = Null
 			'create new path list
@@ -860,7 +877,7 @@ Class XMLNode
 		value += data
 		
 		'create text node
-		Local child:= New XMLNode(name)
+		Local child:= New XMLNode(nameNormalCase)
 		child.text = True
 		child.doc = doc
 		child.parent = Self
@@ -1003,7 +1020,7 @@ Class XMLNode
 		'scan siblings
 		Local pointer:= nextSibling
 		While pointer
-			If pointer.name = name And (text or pointer.text = False) Return pointer
+			If pointer.nameLowerCase = name And (text or pointer.text = False) Return pointer
 			pointer = pointer.nextSibling
 		Wend
 		
@@ -1028,7 +1045,7 @@ Class XMLNode
 		'scan siblings
 		Local pointer:= nextSibling
 		While pointer
-			If (name.Length = 0 or pointer.name = name) and query.Test(pointer) Return pointer
+			If (name.Length = 0 or pointer.nameLowerCase = name) and query.Test(pointer) Return pointer
 			pointer = pointer.nextSibling
 		Wend
 		
@@ -1050,7 +1067,7 @@ Class XMLNode
 		'scan siblings
 		Local pointer:= previousSibling
 		While pointer
-			If pointer.name = name Return pointer
+			If pointer.nameLowerCase = name Return pointer
 			pointer = pointer.previousSibling
 		Wend
 		
@@ -1075,7 +1092,7 @@ Class XMLNode
 		'scan siblings
 		Local pointer:= previousSibling
 		While pointer
-			If (name.Length = 0 or pointer.name = name) and query.Test(pointer) Return pointer
+			If (name.Length = 0 or pointer.nameLowerCase = name) and query.Test(pointer) Return pointer
 			pointer = pointer.previousSibling
 		Wend
 		
@@ -1119,7 +1136,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If child.name = name And (text or child.text = False) Return child
+			If child.nameLowerCase = name And (text or child.text = False) Return child
 			
 			'next child
 			child = child.nextSibling
@@ -1144,7 +1161,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'test
-			If child.name = name And (text or child.text = False) And query.Test(child) Return child
+			If child.nameLowerCase = name And (text or child.text = False) And query.Test(child) Return child
 			
 			'next child
 			child = child.nextSibling
@@ -1192,7 +1209,7 @@ Class XMLNode
 			Local child:= firstChild
 			While child
 				'test
-				If child.name = name And (text or child.text = False) result.AddLast(child)
+				If child.nameLowerCase = name And (text or child.text = False) result.AddLast(child)
 				
 				'next child
 				child = child.nextSibling
@@ -1221,7 +1238,7 @@ Class XMLNode
 			Local child:= firstChild
 			While child
 				'test
-				If (name.Length = 0 or child.name = name) And (text or child.text = False) And query.Test(child) result.AddLast(child)
+				If (name.Length = 0 or child.nameLowerCase = name) And (text or child.text = False) And query.Test(child) result.AddLast(child)
 				
 				'next child
 				child = child.nextSibling
@@ -1238,9 +1255,6 @@ Class XMLNode
 		
 		'skip
 		If firstChild = Null Return result
-		
-		'fix casing
-		name = name.ToLower()
 		
 		'call internal recursive method
 		GetDescendants(result, text)
@@ -1406,7 +1420,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'add to count
-			If child.name = name And (text or child.text = False) total += 1
+			If child.nameLowerCase = name And (text or child.text = False) total += 1
 		
 			'next child
 			child = child.nextSibling
@@ -1435,7 +1449,7 @@ Class XMLNode
 		Local child:= firstChild
 		While child
 			'add to count
-			If (name.Length = 0 or child.name = name) And (text or child.text = False) And query.Test(child) total += 1
+			If (name.Length = 0 or child.nameLowerCase = name) And (text or child.text = False) And query.Test(child) total += 1
 			
 			'next child
 			child = child.nextSibling
@@ -2390,7 +2404,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 							tagName = attributeBuffer.value.ToLower()
 							
 							'check for mismatch
-							If parent = Null or tagName <> parent.name
+							If parent = Null or tagName <> parent.nameLowerCase
 								'error
 								If error error.Set("mismatched end tag", rawLine, rawColumn, rawIndex)
 								Return Null

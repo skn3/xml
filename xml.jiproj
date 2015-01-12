@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<JiProj xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" EntryPoint=".\example7.monkey" Name="xml">
+<JiProj xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" EntryPoint=".\example8.monkey" Name="xml">
   <Files>
     <Document Filename=".\example1.data\test1.xml" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
@@ -57,6 +57,13 @@
         <Y>0</Y>
       </CursorPos>
     </Document>
+    <Document Filename=".\example8.data\data.xml" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
+      <DocGUID />
+      <CursorPos>
+        <X>0</X>
+        <Y>0</Y>
+      </CursorPos>
+    </Document>
     <Document Filename=".\example1.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
       <CursorPos>
@@ -106,6 +113,13 @@
         <Y>0</Y>
       </CursorPos>
     </Document>
+    <Document Filename=".\example8.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
+      <DocGUID />
+      <CursorPos>
+        <X>0</X>
+        <Y>0</Y>
+      </CursorPos>
+    </Document>
     <Document Filename=".\xml.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
       <CursorPos>
@@ -114,5 +128,7 @@
       </CursorPos>
     </Document>
   </Files>
-  <CompilerConfig Configuration="debug" BuildMode="run" Target="Desktop_Game" />
+  <CompilerConfig Configuration="debug" BuildMode="run" Target="C++_Tool" />
+  <Version Major="15" Minor="1" Revision="12" Build="65" ProductName="Untitled product" />
+  <PreBuildCommands />
 </JiProj>
