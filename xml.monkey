@@ -27,6 +27,9 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 34
+' - reworked internal node code so node.Free() will fully remove self from parent
+' - added RemoveFromParent() so a node can be removed but not freed!
 'version 33
 ' - recent changes had broken self contained tags on export
 'version 32
@@ -666,6 +669,9 @@ Class XMLNode
 				child = child.nextSibling
 			Wend
 		EndIf
+		
+		'process remove in parent
+		RemoveFromParent()
 	End
 	
 	'internal
@@ -808,6 +814,34 @@ Class XMLNode
 		'save value
 		fullValue = buffer.value
 	End
+	
+	Method ProcessRemovedChild:Void(child:XMLNode)
+		'skip
+		If child.parent = Null Return
+		
+		'update first/last pointers
+		If lastChild = child lastChild = child.previousSibling
+		If firstChild = child firstChild = child.nextSibling
+		
+		'update sibling pointers
+		If child.previousSibling child.previousSibling.nextSibling = child.nextSibling
+		If child.nextSibling child.nextSibling.previousSibling = child.previousSibling
+		
+		'dettach from doc and parent
+		child.previousSibling = Null
+		child.nextSibling = Null
+		child.parent = Null
+		child.doc = Null
+		
+		'remove from list
+		child.parentListNode.Remove()
+		child.parentListNode = Null
+		
+		'do we need to rebuild the value
+		If child.text
+			RebuildValue()
+		EndIf
+	End
 	Public
 	
 	'properties
@@ -949,6 +983,10 @@ Class XMLNode
 		Return child
 	End
 	
+	Method RemoveFromParent:Void()
+		If parent parent.ProcessRemovedChild(Self)
+	End
+	
 	Method RemoveChild:Void(child:XMLNode)
 		' --- remove child ---
 		'skip
@@ -956,28 +994,6 @@ Class XMLNode
 		
 		'call child to be freed
 		child.Free()
-		
-		'update first and last pointer
-		If lastChild = child lastChild = child.previousSibling
-		If firstChild = child firstChild = child.nextSibling
-		
-		'update sibling pointers
-		If child.previousSibling child.previousSibling.nextSibling = child.nextSibling
-		If child.nextSibling child.nextSibling.previousSibling = child.previousSibling
-		
-		'dettach
-		child.parent = Null
-		child.previousSibling = Null
-		child.nextSibling = Null
-		
-		'remove from list
-		child.parentListNode.Remove()
-		child.parentListNode = Null
-		
-		'do we need to rebuild the value
-		If child.text
-			RebuildValue()
-		EndIf
 	End
 	
 	Method ClearChildren:Void(text:Bool = False)
@@ -987,21 +1003,18 @@ Class XMLNode
 		
 		'iterate
 		Local child:= firstChild
+		Local nextChild:XMLNode
 		While child
+			'remember next child
+			nextChild = child.nextSibling
+			
+			'call child to be freed
 			If text or child.text = False
-				'call child to be freed
 				child.Free()
-				
-				'dettach from doc and parent
-				child.parentListNode = Null
-				child.previousSibling = Null
-				child.nextSibling = Null
-				child.parent = Null
-				child.doc = Null
-				
-				'next child
-				child = child.nextSibling
 			EndIf
+			
+			'next child
+			child = nextChild
 		Wend
 		
 		'reset value
@@ -1026,26 +1039,7 @@ Class XMLNode
 		While pointer
 			nextPointer = pointer.nextSibling
 			If pointer.text
-				'call child to be freed
 				pointer.Free()
-				
-				'update first and last pointer
-				If lastChild = pointer lastChild = pointer.previousSibling
-				If firstChild = pointer firstChild = pointer.nextSibling
-		
-				'update sibling pointers
-				If pointer.previousSibling pointer.previousSibling.nextSibling = pointer.nextSibling
-				If pointer.nextSibling pointer.nextSibling.previousSibling = pointer.previousSibling
-				
-				'remove from list
-				pointer.parentListNode.Remove()
-				pointer.parentListNode = Null
-				
-				'dettach from doc and parent
-				pointer.previousSibling = Null
-				pointer.nextSibling = Null
-				pointer.parent = Null
-				pointer.doc = Null
 			EndIf
 			pointer = nextPointer
 		Wend
