@@ -29,7 +29,7 @@
 
 'version 34
 ' - reworked internal node code so node.Free() will fully remove self from parent
-' - added RemoveFromParent() so a node can be removed but not freed!
+' - added Remove() so a node can be removed but not freed!
 'version 33
 ' - recent changes had broken self contained tags on export
 'version 32
@@ -671,7 +671,7 @@ Class XMLNode
 		EndIf
 		
 		'process remove in parent
-		RemoveFromParent()
+		Remove()
 	End
 	
 	'internal
@@ -983,7 +983,7 @@ Class XMLNode
 		Return child
 	End
 	
-	Method RemoveFromParent:Void()
+	Method Remove:Void()
 		If parent parent.ProcessRemovedChild(Self)
 	End
 	
