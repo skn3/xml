@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 33
+' - recent changes had broken self contained tags on export
 'version 32
 ' - improved performance by storing list node pointers when adding/removing xml nodes
 ' - made it so node.value and node.value = works for text type nodes. Will rebuild parent text value if needed
@@ -707,8 +709,11 @@ Class XMLNode
 				buffer.Add(34)
 			Next
 			
+			'has children need to do opening tag only
+			hasNonTextNodes = HasChildren()
+			
 			'check for short tag
-			If children.IsEmpty() And options & XML_STRIP_CLOSING_TAGS
+			If not hasNonTextNodes and fullValue.Length() = 0 And options & XML_STRIP_CLOSING_TAGS
 				'no children so short tag
 				'finish opening tag
 				buffer.Add(32)
@@ -719,9 +724,6 @@ Class XMLNode
 				If options & XML_STRIP_NEWLINE = False buffer.Add(10)
 	
 			Else
-				'has children need to do opening tag only
-				hasNonTextNodes = HasChildren()
-				
 				'finish opening tag
 				buffer.Add(62)
 				
