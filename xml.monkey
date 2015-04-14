@@ -970,8 +970,8 @@ Class XMLNode
 		
 		'any attributes to add?
 		If node.attributes.IsEmpty() = False
-			For Local attribute:= EachIn node.attributes
-				child.SetAttribute(attribute.idNormalCase, attribute.Value)
+			For Local attribute:= EachIn node.attributes.Values()
+				child.SetAttribute(attribute.idNormalCase, attribute.value)
 			Next
 		EndIf
 		
