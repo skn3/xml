@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 35
+' - added .AddChild(node) method to allow copying a node object into a parent. 
 'version 34
 ' - reworked internal node code so node.Free() will fully remove self from parent
 ' - added Remove() so a node can be removed but not freed!
@@ -945,6 +947,59 @@ Class XMLNode
 		Return child
 	End
 
+	Method AddChild:XMLNode(node:XMLNode)
+		' --- copy a child node ---
+		'skip
+		If valid = False or text or node.valid = False Return Null
+		
+		'create child
+		Local child:= New XMLNode(node.name)
+		child.doc = doc
+		child.parent = Self
+		child.AddText(node.value)
+		
+		'setup path
+		child.path = path + "/" + child.nameLowerCase
+		child.pathList = doc.paths.Get(child.path)
+		If child.pathList = Null
+			'create new path list
+			child.pathList = New List<XMLNode>
+			doc.paths.Set(child.path, child.pathList)
+		EndIf
+		child.pathListNode = child.pathList.AddLast(child)
+		
+		'any attributes to add?
+		If node.attributes.IsEmpty() = False
+			For Local attribute:= EachIn node.attributes
+				child.SetAttribute(attribute.idNormalCase, attribute.Value)
+			Next
+		EndIf
+		
+		'setup link nodes
+		If lastChild
+			'not first child
+			'set previously last child to point next to new child
+			lastChild.nextSibling = child
+			
+			'set new child previous to last child
+			child.previousSibling = lastChild
+			
+			'update this last child to the new child
+			lastChild = child
+		Else
+			'first child
+			firstChild = child
+			lastChild = child
+		EndIf
+		
+		'add to self
+		child.parentListNode = children.AddLast(child)
+		
+		'return it
+		Return child
+	End
+
+	
 	Method AddText:XMLNode(data:String)
 		' --- add a text node ---
 		'skip
