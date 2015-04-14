@@ -964,7 +964,6 @@ Class XMLNode
 		Local child:= New XMLNode(node.name)
 		child.doc = doc
 		child.parent = Self
-		child.AddText(node.value)
 		
 		'setup path
 		child.path = path + "/" + child.nameLowerCase
@@ -1010,6 +1009,8 @@ Class XMLNode
 				child.AddChild(nodeChild, True)
 				nodeChild = nodeChild.nextSibling
 			Wend
+		Else
+			child.AddText(node.value)
 		EndIf
 		
 		'return it
