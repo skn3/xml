@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 36
+' - AddChild(node) now has second param (defaults to true) to handle recursing into child nodes
 'version 35
 ' - added .AddChild(node) method to allow copying a node object into a parent. 
 'version 34
@@ -947,10 +949,16 @@ Class XMLNode
 		Return child
 	End
 
-	Method AddChild:XMLNode(node:XMLNode)
+	Method AddChild:XMLNode(node:XMLNode, recurse:Bool = True)
 		' --- copy a child node ---
 		'skip
-		If valid = False or text or node.valid = False Return Null
+		If valid = False or node.valid = False Return Null
+		
+		'handle text node
+		If node.text
+			'its text so add text
+			Return AddText(node.value)
+		EndIf
 		
 		'create child
 		Local child:= New XMLNode(node.name)
@@ -995,11 +1003,19 @@ Class XMLNode
 		'add to self
 		child.parentListNode = children.AddLast(child)
 		
+		'add children
+		If recurse And node.firstChild
+			Local nodeChild:= node.firstChild
+			While nodeChild
+				child.AddChild(nodeChild, True)
+				nodeChild = nodeChild.nextSibling
+			Wend
+		EndIf
+		
 		'return it
 		Return child
 	End
 
-	
 	Method AddText:XMLNode(data:String)
 		' --- add a text node ---
 		'skip
