@@ -29,6 +29,7 @@
 
 'version 37
 ' - added node.MergeAttributes(node) to let us merge attributes from anotehr node
+' - added node.GetAttributes() to fetch all attributes in a stringmap
 'version 36
 ' - AddChild(node) now has second param (defaults to true) to handle recursing into child nodes
 'version 35
@@ -1687,6 +1688,21 @@ Class XMLNode
 			attribute.idNormalCase = id
 			attribute.value = value
 		EndIf
+	End
+	
+	Method GetAttributes:StringMap<String>(output:StringMap<String> = Null)
+		' --- return all of the attributes at once ---
+		'make sure we have output
+		If output = Null
+			output = New StringMap<string>()
+		EndIf
+		
+		For Local id:= EachIn attributes.Keys()
+			output.Insert(id, attributes.ValueForKey(id).value)
+		Next
+		
+		'done
+		Return output
 	End
 	
 	Method GetAttribute:String(id:String)
