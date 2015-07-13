@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 37
+' - added node.MergeAttributes(node) to let us merge attributes from anotehr node
 'version 36
 ' - AddChild(node) now has second param (defaults to true) to handle recursing into child nodes
 'version 35
@@ -1881,6 +1883,15 @@ Class XMLNode
 		If valid = False Return
 		
 		attributes.Clear()
+	End
+	
+	Method MergeAttributes:Void(source:XMLNode, overwrite:Bool = False)
+		' --- apply multiple attributes from anotehr node ---
+		For Local id:= EachIn source.attributes.Keys()
+			If overwrite Or attributes.Contains(id) = False
+				SetAttribute(id, source.GetAttribute(id))
+			EndIf
+		Next
 	End
 	
 	'api
