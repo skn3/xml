@@ -27,6 +27,8 @@
 'Each node will have its document line,column and offset values added to it for each debugging. Error messages will also report correct document details.
 'The lib was written from scratch with no reference.
 
+'version 38
+' - fixed bug in parsing attributes without quotes, preceeding > caused xml error
 'version 37
 ' - added node.MergeAttributes(node) to let us merge attributes from anotehr node
 ' - added node.GetAttributes() to fetch all attributes in a stringmap
@@ -2433,7 +2435,7 @@ Function ParseXML:XMLDoc(raw:String, error:XMLError = Null, options:Int = XML_ST
 						Case 62'>
 							'close tag
 							
-							If hasEquals or (hasTagName = False And attributeBuffer.Length = 0)
+							If (hasEquals or hasTagName = False) And attributeBuffer.Length = 0
 								'error
 								If error error.Set("unexpected close bracket", rawLine, rawColumn, rawIndex)
 								Return Null
