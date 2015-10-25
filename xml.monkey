@@ -1699,8 +1699,8 @@ Class XMLNode
 			output = New StringMap<string>()
 		EndIf
 		
-		For Local id:= EachIn attributes.Keys()
-			output.Insert(id, attributes.ValueForKey(id).value)
+		For Local attribute:= EachIn attributes.Values()
+			output.Insert(attribute.idLowercase, attribute.value)
 		Next
 		
 		'done
